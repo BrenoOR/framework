@@ -27,6 +27,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdarg>
+#include <stdio.h>
 
 #include "protobuf/ssl_simulation_robot_control.pb.h"
 #include "protobuf/ssl_simulation_robot_feedback.pb.h"
@@ -636,6 +637,9 @@ void SimProxy::handleCommand(const Command &command) {
         connect(this, &SimProxy::handleRadioCommands, m_sim, &Simulator::handleRadioCommands);
         connect(m_sim, &Simulator::sendSSLSimError, this, &SimProxy::sendSSLSimError);
         connect(m_sim, &Simulator::sendRadioResponses, this, &SimProxy::sendRadioResponses);
+
+        std::cout << "Simulator-CLI" << std::endl;
+
         auto* simCommand = m_teamCommand->mutable_simulator();
         simCommand->set_enable(true);
         auto* trCommand = m_teamCommand->mutable_transceiver();
@@ -669,11 +673,8 @@ int main(int argc, char* argv[])
     parser.setApplicationDescription("ER-Force simulator command line interface");
     parser.addHelpOption();
 
-    QCommandLineOption geometryConfig({"g", "geometry"}, "The geometry file to load as default", "file", "2020");
-    QCommandLineOption realismConfig("realism", "Simulator realism configuration (short file name without the .txt)", "realism", "Realistic");
-    parser.addOption(geometryConfig);
-    parser.addOption(realismConfig);
-
+    QCommandLineOption divisionConfig("division", "Division to load between A or B (The default value is 'B')", "division", "B");
+    parser.addOption(divisionConfig);
 
     parser.process(app);
 
@@ -681,7 +682,6 @@ int main(int argc, char* argv[])
     int real_fields = desc->field_count();
     auto* desc2 = sslsim::RobotSpecErForce::descriptor();
     real_fields += desc2->field_count();
-
 
     if (real_fields != expected_specs_fields) {
         std::string msg = "BUG: The number of fields for the specs has a different number compared to expected!";
@@ -720,20 +720,42 @@ int main(int argc, char* argv[])
     robot::Specs ERForce;
     robotSetDefault(&ERForce);
 
+    QString SSLConfig;
+    
+    if (!parser.isSet(divisionConfig)) {
+        SSLConfig = QString("B");
+    } else {
+        SSLConfig = parser.value(divisionConfig);
+    }
+
+    auto* simControl = c->mutable_simulator()->mutable_ssl_control();
+    auto* tpBall = simControl->mutable_teleport_ball();
+
     auto* teamBlue = c->mutable_set_team_blue();
     auto* teamYellow = c->mutable_set_team_yellow();
     for(auto* team : {teamBlue, teamYellow}) {
-        for(int i=0; i < 11; ++i){
+        for(int i=0; i < (SSLConfig == QString("A") ? 11 : 6); ++i){
             auto* robot = team->add_robot();
             robot->CopyFrom(ERForce);
             robot->set_id(i);
+
+            auto* tpRobot = simControl->add_teleport_robot();
+            auto* robotId = tpRobot->mutable_id();
         }
     }
 
-    if (!loadConfiguration("simulator/" + parser.value(geometryConfig), c->mutable_simulator()->mutable_simulator_setup(), false)) {
-        exit(EXIT_FAILURE);
+
+    if (SSLConfig == QString("A")) {
+        if (!loadConfiguration("simulator/2020", c->mutable_simulator()->mutable_simulator_setup(), false)) {
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        if (!loadConfiguration("simulator/2020B", c->mutable_simulator()->mutable_simulator_setup(), false)) {
+            exit(EXIT_FAILURE);
+        }
     }
-    if (!loadConfiguration("simulator-realism/" + parser.value(realismConfig), c->mutable_simulator()->mutable_realism_config(), true)) {
+
+    if (!loadConfiguration("simulator-realism/RC2021", c->mutable_simulator()->mutable_realism_config(), true)) {
         exit(EXIT_FAILURE);
     }
 

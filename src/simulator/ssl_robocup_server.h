@@ -35,7 +35,7 @@ class RoboCupSSLServer
 friend class MultiStackRoboCupSSL;
 public:
     RoboCupSSLServer(QObject *parent=0,
-                     const quint16 &port=10002,
+                     const quint16 &port=10020,
                      const string &net_address="224.5.23.2"
                      );
 

@@ -725,9 +725,13 @@ void Simulator::handleCommand(const Command &command)
 {
     bool teamOrPerfectDribbleChanged = false;
 
+    std::cout << "Simulator::handleCommand" << std::endl;
+
     if (command->has_simulator()) {
+        std::cout << "command->has_simulator()" << std::endl;
         const amun::CommandSimulator &sim = command->simulator();
         if (sim.has_enable()) {
+            std::cout << "sim->has_enable()" << std::endl;
             m_enabled = sim.enable();
             m_time = m_timer->currentTime();
             // update timer when simulator status is changed
@@ -735,6 +739,7 @@ void Simulator::handleCommand(const Command &command)
         }
 
         if (sim.has_realism_config()) {
+            std::cout << "sim->has_realism_config()" << std::endl;
             auto realism = sim.realism_config();
             if (realism.has_stddev_ball_p()) {
                 m_data->stddevBall = realism.stddev_ball_p();
@@ -807,12 +812,17 @@ void Simulator::handleCommand(const Command &command)
         }
 
         if (sim.has_ssl_control()) {
+            std::cout << "sim.has_ssl_control()" << std::endl;
             const auto& sslControl = sim.ssl_control();
             if (sslControl.has_teleport_ball()) {
+                std::cout << "sslControl.has_teleport_ball()" << std::endl;
                 moveBall(sslControl.teleport_ball());
             }
+            int i = 0;
             for (const auto& moveR : sslControl.teleport_robot()) {
+                std::cout << "#" << i << " - sslControl.teleport_robot()" << std::endl;
                 moveRobot(moveR);
+                i++;
             }
         }
 
